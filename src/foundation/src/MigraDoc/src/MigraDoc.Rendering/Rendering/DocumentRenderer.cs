@@ -172,6 +172,45 @@ namespace MigraDoc.Rendering
             renderer = Renderer.Create(graphics, this, renderer.RenderInfo, null);
             renderer.Render();
         }
+        
+        /// <summary>
+        /// Renders a single object to the specified graphics object at the given point.
+        /// The render uses FieldInfos from page specified by page index. If they're
+        /// missing like in RenderObject method, the operation fails because
+        /// the FieldInfos are missing.
+        /// </summary>
+        /// <param name="graphics">The graphics object to render on.</param>
+        /// <param name="xPosition">The left position of the rendered object.</param>
+        /// <param name="yPosition">The top position of the rendered object.</param>
+        /// <param name="width">The width.</param>
+        /// <param name="documentObject">The document object to render. Can be paragraph, table, or shape.</param>
+        /// <param name="pageIndex">Index of page that is the source of FieldInfos. Default value is 1 (the first page).</param>
+        /// <remarks>This function is still in an experimental state.</remarks>
+        public void RenderObjectWithFieldInfosFromPage(XGraphics graphics, XUnitPt xPosition, XUnitPt yPosition, XUnitPt width, DocumentObject documentObject, int pageIndex = 1)
+        {
+            if (graphics == null)
+                throw new ArgumentNullException(nameof(graphics));
+
+            if (documentObject == null)
+                throw new ArgumentNullException(nameof(documentObject));
+
+            if (documentObject is not Shape &&
+                documentObject is not Table &&
+                documentObject is not Paragraph)
+                throw new ArgumentException(MdPdfMsgs.ObjectNotRenderable(documentObject.GetType().Name).Message);
+
+            var fieldInfos = FormattedDocument.GetFieldInfos(pageIndex);
+
+            var renderer = Renderer.Create(graphics, this, documentObject, fieldInfos);
+            renderer!.Format(new Rectangle(xPosition, yPosition, width, double.MaxValue), null);
+
+            RenderInfo renderInfo = renderer.RenderInfo;
+            renderInfo.LayoutInfo.ContentArea.X = xPosition;
+            renderInfo.LayoutInfo.ContentArea.Y = yPosition;
+
+            renderer = Renderer.Create(graphics, this, renderer.RenderInfo, fieldInfos);
+            renderer.Render();
+        }
 
         /// <summary>
         /// Gets or sets the working directory for rendering.
